@@ -66,4 +66,4 @@ luau tests/adapter.luau
 - [Roblox Requests](https://github.com/pat-dill/roblox-requests) (MIT): явные HTTP-статусы, декодирование и ошибки; проект использует собственную минимальную реализацию `fetch`, код не копировался.
 - [buildaboatAutoFarm](https://github.com/scarabhub/buildaboatAutoFarm) (Apache-2.0): один файл, README описывает executor и бесконечный цикл. Это не подтверждение официального API; такой способ и код не использовались. README не содержит доказательств автоматических тестов или обработки ошибок.
 
-См. также [план и ограничения](docs.md). Лицензия проекта — [MIT](LICENSE).
+См. также [исследование](RESEARCH.md) и [план и ограничения](docs.md). Лицензия проекта — [MIT](LICENSE).
