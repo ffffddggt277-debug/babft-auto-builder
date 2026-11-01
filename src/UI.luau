@@ -9,11 +9,17 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     local guiParent = player:FindFirstChildOfClass('PlayerGui')
     if not guiParent then warn('BABFT Auto Builder: PlayerGui недоступен'); return end
     local previous = guiParent:FindFirstChild('BabftAutoBuilder')
-    if previous then warn('BABFT Auto Builder уже открыт; повторный запуск запрещён, пока он существует'); return end
+    if previous then
+        local message='Закройте Roblox и зайдите снова, затем запустите обновлённый скрипт.'
+        warn('BABFT Auto Builder: '..message)
+        pcall(function() game:GetService('StarterGui'):SetCore('SendNotification',{Title='BABFT Auto Builder',Text=message,Duration=8}) end)
+        return
+    end
     local oldPreview = workspace:FindFirstChild('BabftAutoBuilderLocalPreview')
     if oldPreview then oldPreview:Destroy() end
     local gui = Instance.new('ScreenGui')
-    gui.Name='BabftAutoBuilder'; gui.ResetOnSpawn=false; gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling; gui.DisplayOrder=100; gui.Parent=guiParent
+    gui.Name='BabftAutoBuilder'; gui.ResetOnSpawn=false; gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+    gui.ScreenInsets=Enum.ScreenInsets.CoreUISafeInsets; gui.DisplayOrder=100; gui.Parent=guiParent
     local colors = {background=Color3.fromRGB(21,28,33),surface=Color3.fromRGB(32,42,47),field=Color3.fromRGB(43,54,59),text=Color3.fromRGB(235,243,239),muted=Color3.fromRGB(169,185,178),accent=Color3.fromRGB(55,147,116),warning=Color3.fromRGB(244,190,115)}
     local function create(class, props, parent)
         local inst = Instance.new(class)
@@ -23,37 +29,27 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     end
     local function corner(object, radius) create('UICorner',{CornerRadius=UDim.new(0,radius)},object) end
     local function label(parent,text,height,color)
-        return create('TextLabel',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,height),AutomaticSize=Enum.AutomaticSize.Y,Text=text,TextColor3=color or colors.text,Font=Enum.Font.Gotham,TextSize=15,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Center},parent)
+        return create('TextLabel',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,height),AutomaticSize=Enum.AutomaticSize.Y,Text=text,TextColor3=color or colors.text,Font=Enum.Font.Gotham,TextSize=14,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Center},parent)
     end
     local function button(parent,text,height)
-        local b=create('TextButton',{BackgroundColor3=colors.field,BorderSizePixel=0,Size=UDim2.new(1,0,0,height or 48),Text=text,TextColor3=colors.text,Font=Enum.Font.GothamMedium,TextSize=15,TextWrapped=true,AutoButtonColor=true},parent)
+        local b=create('TextButton',{BackgroundColor3=colors.field,BorderSizePixel=0,Size=UDim2.new(1,0,0,height or 42),Text=text,TextColor3=colors.text,Font=Enum.Font.GothamMedium,TextSize=14,TextWrapped=true,AutoButtonColor=true},parent)
         corner(b,7); return b
     end
     local function textbox(parent,placeholder,default)
-        local b=create('TextBox',{BackgroundColor3=colors.field,BorderSizePixel=0,Size=UDim2.new(1,0,0,44),Text=default or '',PlaceholderText=placeholder,PlaceholderColor3=colors.muted,TextColor3=colors.text,Font=Enum.Font.Gotham,TextSize=15,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},parent)
+        local b=create('TextBox',{BackgroundColor3=colors.field,BorderSizePixel=0,Size=UDim2.new(1,0,0,42),Text=default or '',PlaceholderText=placeholder,PlaceholderColor3=colors.muted,TextColor3=colors.text,Font=Enum.Font.Gotham,TextSize=14,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},parent)
         create('UIPadding',{PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,10)},b);corner(b,7);return b
     end
-    local open = button(gui,'BABFT',44)
-    open.Position=UDim2.new(0,12,0.5,-22);open.Size=UDim2.fromOffset(76,44);open.Visible=false;open.BackgroundColor3=colors.accent
-    local window = create('Frame',{Name='Window',BackgroundColor3=colors.background,BorderSizePixel=0,Position=UDim2.fromScale(0.5,0.5),AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(460,570)},gui)
+    -- Use the ScreenGui's actual safe area, not Camera.ViewportSize: on phones
+    -- the two can differ after insets and display scaling are applied.
+    local root=create('Frame',{Name='SafeRoot',BackgroundTransparency=1,BorderSizePixel=0,Size=UDim2.fromScale(1,1)},gui)
+    local open = button(root,'BABFT',40)
+    open.AnchorPoint=Vector2.new(0.5,0);open.Position=UDim2.new(0.5,0,0,8);open.Size=UDim2.fromOffset(76,40);open.Visible=false;open.BackgroundColor3=colors.accent
+    local window = create('Frame',{Name='Window',BackgroundColor3=colors.background,BorderSizePixel=0,Position=UDim2.fromScale(0.5,0.5),AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.new(0.88,0,0.82,0)},root)
+    create('UISizeConstraint',{MaxSize=Vector2.new(450,460)},window)
     corner(window,10)
-    local function sizeWindow()
-        local camera=workspace.CurrentCamera
-        if not camera then return end
-        local v=camera.ViewportSize
-        window.Size=UDim2.fromOffset(math.max(1,math.min(500,v.X-24)),math.max(1,math.min(600,v.Y-36)))
-        -- Orientation changes can otherwise leave a dragged window off-screen.
+    local safeSizeChanged=root:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()
         window.Position=UDim2.fromScale(0.5,0.5)
-    end
-    sizeWindow()
-    local cameraConnection
-    local function watchCamera()
-        if cameraConnection then cameraConnection:Disconnect() end
-        local camera=workspace.CurrentCamera
-        if camera then cameraConnection=camera:GetPropertyChangedSignal('ViewportSize'):Connect(sizeWindow) end
-        sizeWindow()
-    end
-    local cameraChanged=workspace:GetPropertyChangedSignal('CurrentCamera'):Connect(watchCamera);watchCamera()
+    end)
     local header=create('Frame',{BackgroundColor3=colors.surface,BorderSizePixel=0,Size=UDim2.new(1,0,0,48),Active=true},window);corner(header,10)
     local title=create('TextLabel',{BackgroundTransparency=1,Position=UDim2.fromOffset(14,0),Size=UDim2.new(1,-76,1,0),Text='BABFT AUTO BUILDER',TextColor3=colors.text,Font=Enum.Font.GothamBold,TextSize=15,TextXAlignment=Enum.TextXAlignment.Left,Active=true},header)
     local hide=button(header,'—',36);hide.Size=UDim2.fromOffset(48,36);hide.Position=UDim2.new(1,-54,0,6)
@@ -69,10 +65,10 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
         if not activeInput then return end
         if input==activeInput or (activeInput.UserInputType==Enum.UserInputType.MouseButton1 and input.UserInputType==Enum.UserInputType.MouseMovement) then
             local delta=input.Position-dragStart
-            local camera=workspace.CurrentCamera; if not camera then return end
-            local v=camera.ViewportSize;local size=window.AbsoluteSize
-            local x=math.clamp(startPosition.X.Scale*v.X+startPosition.X.Offset+delta.X,size.X/2,v.X-size.X/2)
-            local y=math.clamp(startPosition.Y.Scale*v.Y+startPosition.Y.Offset+delta.Y,size.Y/2,v.Y-size.Y/2)
+            local v=root.AbsoluteSize;local size=window.AbsoluteSize
+            local halfX=math.min(size.X/2,v.X/2);local halfY=math.min(size.Y/2,v.Y/2)
+            local x=math.clamp(startPosition.X.Scale*v.X+startPosition.X.Offset+delta.X,halfX,v.X-halfX)
+            local y=math.clamp(startPosition.Y.Scale*v.Y+startPosition.Y.Offset+delta.Y,halfY,v.Y-halfY)
             window.Position=UDim2.fromOffset(x,y)
         end
     end)
@@ -135,7 +131,7 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     end,task.wait)
     local function running() return busy or builder.state=='running' or builder.state=='paused' or builder.state=='cancelling' end
     local function safe(fn)
-        local ok,err=pcall(fn); if not ok then log('ОШИБКА: '..tostring(err));progress.Text='Ошибка: '..tostring(err) end
+        local ok,err=pcall(fn); if not ok then local message=tostring(err):gsub('^.-:%d+: ','');log('ОШИБКА: '..message);progress.Text='Ошибка: '..message end
     end
     inspectGold.Activated:Connect(function() safe(function()
         local data=player:FindFirstChild('Data')
@@ -218,12 +214,12 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
         local ready,err=adapter:ready();if not ready then error(err) end
         local inv=readInventory();if not inv then error('Инвентарь неизвестен') end
         local missing=Planner.compare(Planner.count(blueprint),inv);if missing.wood>0 then error('Не хватает wood: '..missing.wood) end
-        local plan=Planner.plan(blueprint,orderMode);busy=true
+        local plan=Planner.plan(blueprint,orderMode);clearPreview();log('Превью убрано перед попыткой постройки');busy=true
         task.spawn(function() local ok,message=pcall(function() builder:start(plan,interval) end);busy=false;if not ok then log('Ошибка выполнения: '..tostring(message)) end end)
     end) end)
     pause.Activated:Connect(function() if builder.state=='paused' then builder:resume() else builder:pause() end end)
     cancel.Activated:Connect(function() builder:cancel() end)
-    gui.Destroying:Connect(function() clearPreview();inputEnded:Disconnect();inputMoved:Disconnect();cameraChanged:Disconnect();if cameraConnection then cameraConnection:Disconnect() end;builder:cancel() end)
+    gui.Destroying:Connect(function() clearPreview();inputEnded:Disconnect();inputMoved:Disconnect();safeSizeChanged:Disconnect();builder:cancel() end)
     log('Загружен executor-интерфейс. Экспериментальный адаптер в игре не проверен.')
 end
 return UI

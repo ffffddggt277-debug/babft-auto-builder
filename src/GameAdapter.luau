@@ -38,19 +38,39 @@ function GameAdapter:place(block)
     local p, r = block.position, block.rotation
     local target = self.origin * self.frame.new(p.x,p.y,p.z) * self.frame.Angles(math.rad(r.x),math.rad(r.y),math.rad(r.z))
     -- A successful network call is not confirmation of a placed block.
-    local ok, callErr = pcall(function() context.rf:InvokeServer('WoodBlock',inventory.wood,context.zone,target,true) end)
-    if not ok then return false,'Вызов отклонён или завершился ошибкой: '..tostring(callErr) end
-    for _ = 1, 30 do
+    local ok, response = pcall(function() return context.rf:InvokeServer('WoodBlock',inventory.wood,context.zone,target,true) end)
+    if not ok then return false,'Ошибка вызова BuildingTool: '..tostring(response) end
+    local observedNew, observedWood, closest = 0, 0, nil
+    for _ = 1, 40 do
+        observedNew, observedWood, closest = 0, 0, nil
         for _, candidate in ipairs(context.owned:GetChildren()) do
-            if not before[candidate] and candidate.Name == 'WoodBlock' then
-                local part = candidate:IsA('BasePart') and candidate or candidate:FindFirstChildWhichIsA('BasePart',true)
-                if part and (part.Position-target.Position).Magnitude < 1 then
-                    return true,'Обнаружен новый WoodBlock рядом с точкой; происхождение, цвет и размер не подтверждены'
+            if not before[candidate] then
+                observedNew += 1
+                if candidate.Name == 'WoodBlock' then
+                    observedWood += 1
+                    local part
+                    if candidate:IsA('BasePart') then
+                        part = candidate
+                    else
+                        -- Public BABFT source identifies the model's PPart as its geometry.
+                        part = candidate:FindFirstChild('PPart')
+                        if not part or not part:IsA('BasePart') then part = candidate:FindFirstChildWhichIsA('BasePart',true) end
+                    end
+                    if part then
+                        local distance = (part.Position-target.Position).Magnitude
+                        closest = math.min(closest or distance,distance)
+                        if distance < 2 then
+                            return true,'Замечен новый WoodBlock у цели; свойства и происхождение не проверены'
+                        end
+                    end
                 end
             end
         end
-        self.wait(0.1)
+        self.wait(0.2)
     end
-    return false,'Нет подтверждения нового блока в течение 3 секунд. Возможно частичное размещение; проверьте участок перед повтором.'
+    local inventoryAfter = self:inventory()
+    local countAfter = inventoryAfter and tostring(inventoryAfter.wood) or '?'
+    local distanceText = closest and string.format('%.1f',closest) or 'нет'
+    return false, string.format('Блок у цели не найден за 8 с: новых объектов %d, WoodBlock %d, расстояние %s, инвентарь %d → %s, ответ %s. Проверьте участок перед повтором.',observedNew,observedWood,distanceText,inventory.wood,countAfter,type(response))
 end
 return GameAdapter

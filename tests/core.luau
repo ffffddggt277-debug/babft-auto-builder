@@ -65,7 +65,23 @@ test('game adapter detects a nearby new block and forwards five sourced argument
         assert(kind=='WoodBlock' and amount==3 and zone==w.children.WhiteZone and anchored==true)
         local part=instance('WoodBlock','BasePart');part.Position=target.Position;owned.children.placed=part
     end
-    local a=GameAdapter.new(p,w,function() end,frame);a.origin=frame.new(10,0,0);local ok,msg=a:place(Schema.validate(sample()).blocks[1]);assert(ok and string.find(msg,'не подтверждены'))
+    local a=GameAdapter.new(p,w,function() end,frame);a.origin=frame.new(10,0,0);local ok,msg=a:place(Schema.validate(sample()).blocks[1]);assert(ok and string.find(msg,'не проверены'))
+end)
+test('adapter prefers PPart in replicated model',function()
+    local vector={};vector.__index=vector;vector.__sub=function(a,b) local x,y,z=a.x-b.x,a.y-b.y,a.z-b.z;return {Magnitude=math.sqrt(x*x+y*y+z*z)} end
+    local function vec(x,y,z) return setmetatable({x=x,y=y,z=z},vector) end
+    local frame={};local mt={};mt.__mul=function(a,b) return setmetatable({Position=vec(a.Position.x+b.Position.x,a.Position.y+b.Position.y,a.Position.z+b.Position.z)},mt) end
+    frame.new=function(x,y,z) return setmetatable({Position=vec(x or 0,y or 0,z or 0)},mt) end;frame.Angles=function() return frame.new(0,0,0) end
+    local p=instance('P','Player');p.Team={Name='White'};p.Character=instance('Character','Model');local tool=instance('BuildingTool','Tool');p.Character.children.BuildingTool=tool
+    local data=instance('Data','Folder');data.children.WoodBlock=instance('WoodBlock','IntValue',3);p.children.Data=data
+    local settings=instance('Settings','Folder');settings.children.ShareBlocks=instance('ShareBlocks','BoolValue',false);p.children.Settings=settings
+    local rf=instance('RF','RemoteFunction');tool.children.RF=rf;local w=instance('World','Workspace');w.children.WhiteZone=instance('WhiteZone','Part');local blocks=instance('Blocks','Folder');local owned=instance('P','Folder');blocks.children.P=owned;w.children.Blocks=blocks
+    function rf:InvokeServer(_,_,_,target)
+        local model=instance('WoodBlock','Model');local main=instance('PPart','BasePart');main.Position=target.Position;model.children.PPart=main
+        function model:FindFirstChildWhichIsA() error('PPart should be selected first') end
+        owned.children.m=model
+    end
+    local a=GameAdapter.new(p,w,function() end,frame);a.origin=frame.new(0,0,0);local ok=a:place(Schema.validate(sample()).blocks[1]);assert(ok)
 end)
 test('game adapter stops when no block observed after call',function()
     local vec={};vec.__index=vec;vec.__sub=function() return {Magnitude=99} end
@@ -76,6 +92,6 @@ test('game adapter stops when no block observed after call',function()
     local settings=instance('Settings','Folder');settings.children.ShareBlocks=instance('ShareBlocks','BoolValue',false);p.children.Settings=settings
     local rf=instance('RF','RemoteFunction');function rf:InvokeServer() end;tool.children.RF=rf
     local w=instance('World','Workspace');w.children.WhiteZone=instance('WhiteZone','Part');local blocks=instance('Blocks','Folder');blocks.children.P=instance('P','Folder');w.children.Blocks=blocks
-    local ticks=0;local a=GameAdapter.new(p,w,function() ticks+=1 end,cf);a.origin=frame();local ok,msg=a:place(Schema.validate(sample()).blocks[1]);assert(not ok and string.find(msg,'Нет подтверждения') and ticks==30)
+    local ticks=0;local a=GameAdapter.new(p,w,function() ticks+=1 end,cf);a.origin=frame();local ok,msg=a:place(Schema.validate(sample()).blocks[1]);assert(not ok and string.find(msg,'Блок у цели не найден') and ticks==40)
 end)
 print('TOTAL '..passed..' tests passed')

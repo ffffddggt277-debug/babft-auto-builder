@@ -7,7 +7,7 @@ local function signal()
     return s
 end
 local function fakeEnum() return setmetatable({}, {__index=function(_,k) return k end}) end
-local Enum=setmetatable({}, {__index=function(_,k) if k=='Font' or k=='UserInputType' or k=='TextXAlignment' or k=='TextYAlignment' or k=='ZIndexBehavior' or k=='SortOrder' or k=='AutomaticSize' or k=='FillDirection' then return fakeEnum() end end})
+local Enum=setmetatable({}, {__index=function(_,k) if k=='Font' or k=='UserInputType' or k=='TextXAlignment' or k=='TextYAlignment' or k=='ZIndexBehavior' or k=='SortOrder' or k=='ScreenInsets' or k=='AutomaticSize' or k=='FillDirection' then return fakeEnum() end end})
 local UDim={new=function(a,b) return {Scale=a,Offset=b} end}
 local UDim2={new=function(a,b,c,d) return {X=UDim.new(a,b),Y=UDim.new(c,d)} end,fromOffset=function(x,y) return {X=UDim.new(0,x),Y=UDim.new(0,y)} end,fromScale=function(x,y) return {X=UDim.new(x,0),Y=UDim.new(y,0)} end}
 local Vector2={new=function(x,y) return {X=x,Y=y} end}
