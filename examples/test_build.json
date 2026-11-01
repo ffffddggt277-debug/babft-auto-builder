@@ -1,41 +1,10 @@
 {
   "version": 1,
-  "name": "Деревянный плот",
+  "name": "Простой деревянный плот",
   "blocks": [
-    {
-      "type": "wood",
-      "position": { "x": 0, "y": 0, "z": 0 },
-      "size": { "x": 2, "y": 1, "z": 2 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "color": "#B68153"
-    },
-    {
-      "type": "wood",
-      "position": { "x": 2, "y": 0, "z": 0 },
-      "size": { "x": 2, "y": 1, "z": 2 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "color": "#C18B5D"
-    },
-    {
-      "type": "wood",
-      "position": { "x": 0, "y": 0, "z": 2 },
-      "size": { "x": 2, "y": 1, "z": 2 },
-      "rotation": { "x": 0, "y": 90, "z": 0 },
-      "color": "#A66F46"
-    },
-    {
-      "type": "wood",
-      "position": { "x": 2, "y": 0, "z": 2 },
-      "size": { "x": 2, "y": 1, "z": 2 },
-      "rotation": { "x": 0, "y": 0, "z": 0 },
-      "color": "#B68153"
-    },
-    {
-      "type": "wood",
-      "position": { "x": 1, "y": 1, "z": 1 },
-      "size": { "x": 1, "y": 1, "z": 1 },
-      "rotation": { "x": 0, "y": 45, "z": 0 },
-      "color": "#D09D70"
-    }
+    {"type":"wood","position":{"x":0,"y":0,"z":0},"size":{"x":2,"y":1,"z":2},"rotation":{"x":0,"y":0,"z":0},"color":"#B68153"},
+    {"type":"wood","position":{"x":2,"y":0,"z":0},"size":{"x":2,"y":1,"z":2},"rotation":{"x":0,"y":0,"z":0},"color":"#B68153"},
+    {"type":"wood","position":{"x":0,"y":0,"z":2},"size":{"x":2,"y":1,"z":2},"rotation":{"x":0,"y":0,"z":0},"color":"#B68153"},
+    {"type":"wood","position":{"x":2,"y":0,"z":2},"size":{"x":2,"y":1,"z":2},"rotation":{"x":0,"y":0,"z":0},"color":"#B68153"}
   ]
 }

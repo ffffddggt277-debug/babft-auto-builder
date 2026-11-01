@@ -1,5 +1,5 @@
 local UI = {}
-function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
+function UI.start(Schema, Loader, Planner, Builder, GameAdapter, Geometry)
     if game.PlaceId ~= 537413528 then warn('BABFT Auto Builder: требуется Build A Boat For Treasure (place 537413528)'); return end
     local Players = game:GetService('Players')
     local HttpService = game:GetService('HttpService')
@@ -108,7 +108,7 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     order(label(buildPage,'Внимание: игровой адаптер не проверен. Размер и цвет при постройке не применяются.',55,colors.warning))
     local inventoryLabel=order(label(buildPage,'Инвентарь: неизвестен',48,colors.muted))
     local inventoryButton=order(button(buildPage,'Прочитать Data.WoodBlock'))
-    local originButton=order(button(buildPage,'Сохранить позицию персонажа как начало'))
+    local originButton=order(button(buildPage,'Начало на поверхности перед персонажем'))
     local originLabel=order(label(buildPage,'Начальная точка не задана',40,colors.muted))
     local orderButton=order(button(buildPage,'Порядок: как в JSON'))
     local speed=order(textbox(buildPage,'Интервал в секундах (0.2–10)','0.5'))
@@ -171,7 +171,7 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     end
     load.Activated:Connect(function()
         if running() then log('Дождитесь окончания текущей операции');return end
-        busy=true;blueprint=nil;clearPreview();updateSummary();summary.Text='Загрузка…';log('Загрузка схемы')
+        busy=true;blueprint=nil;adapter.origin=nil;originLabel.Text='Начальная точка не задана';clearPreview();updateSummary();summary.Text='Загрузка…';log('Загрузка схемы')
         task.spawn(function()
             local finished,result,fetchError=false,nil,nil
             task.spawn(function()
@@ -190,8 +190,21 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     inventoryButton.Activated:Connect(function() safe(readInventory) end)
     originButton.Activated:Connect(function() safe(function()
         if running() then error('Нельзя менять начало во время работы') end
-        local root=player.Character and player.Character:FindFirstChild('HumanoidRootPart');if not root then error('Персонаж не найден') end
-        adapter.origin=CFrame.new(root.Position);clearPreview();originLabel.Text=string.format('Начало: %.1f, %.1f, %.1f',root.Position.X,root.Position.Y,root.Position.Z);log('Начальная точка сохранена')
+        if not blueprint then error('Сначала загрузите схему',0) end
+        local character=player.Character
+        local root=character and character:FindFirstChild('HumanoidRootPart');if not root then error('Персонаж не найден',0) end
+        local facing=root.CFrame.LookVector
+        local rayStart=root.Position+Vector3.new(facing.X*6,0,facing.Z*6)
+        local params=RaycastParams.new();params.FilterType=Enum.RaycastFilterType.Exclude
+        local excluded={character};if preview then table.insert(excluded,preview) end
+        params.FilterDescendantsInstances=excluded;params.IgnoreWater=true
+        local hit=workspace:Raycast(rayStart,Vector3.new(0,-100,0),params)
+        if not hit then error('Поверхность перед персонажем не найдена. Встаньте на площадке и попробуйте снова.',0) end
+        local ground=hit.Position
+        local y=Geometry.originY(blueprint,ground.Y)
+        adapter.origin=CFrame.new(ground.X,y,ground.Z);clearPreview()
+        originLabel.Text=string.format('Поверхность: %.1f, %.1f, %.1f; начало схемы: %.1f',ground.X,ground.Y,ground.Z,y)
+        log('Начало схемы вычислено по поверхности перед персонажем')
     end) end)
     orderButton.Activated:Connect(function() if running() then return end;orderMode=(orderMode=='original' and 'bottom-up' or 'original');orderButton.Text=(orderMode=='original' and 'Порядок: как в JSON' or 'Порядок: снизу вверх');updateSummary() end)
     consent.Activated:Connect(function() if running() then return end;consented=not consented;consent.Text='Разрешить эксперимент и принять потерю цвета/размера: '..(consented and 'ДА' or 'НЕТ') end)
@@ -200,9 +213,12 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
         if not blueprint or not adapter.origin then error('Загрузите схему и задайте начало') end
         preview=Instance.new('Folder');preview.Name='BabftAutoBuilderLocalPreview';preview.Parent=workspace
         for _,b in ipairs(blueprint.blocks) do
-            local part=Instance.new('Part');part.Name='Preview';part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Transparency=0.55
+            local part=Instance.new('Part');part.Name='Preview';part.Anchored=true;part.CanCollide=false;part.CanTouch=false;part.CanQuery=false;part.Transparency=0.3;part.TopSurface=Enum.SurfaceType.Smooth;part.BottomSurface=Enum.SurfaceType.Smooth
             part.Size=Vector3.new(b.size.x,b.size.y,b.size.z)
-            local p,r=b.position,b.rotation;part.CFrame=adapter.origin*CFrame.new(p.x,p.y,p.z)*CFrame.Angles(math.rad(r.x),math.rad(r.y),math.rad(r.z));part.Color=Color3.fromRGB(tonumber(b.color:sub(2,3),16),tonumber(b.color:sub(4,5),16),tonumber(b.color:sub(6,7),16));part.Parent=preview
+            part.CFrame=adapter:transform(b);part.Color=Color3.fromRGB(tonumber(b.color:sub(2,3),16),tonumber(b.color:sub(4,5),16),tonumber(b.color:sub(6,7),16));part.Parent=preview
+            if #blueprint.blocks<=400 then
+                local outline=Instance.new('SelectionBox');outline.Adornee=part;outline.Color3=Color3.fromRGB(240,248,245);outline.LineThickness=0.025;outline.SurfaceTransparency=1;outline.Parent=part
+            end
         end
         log('Показано локальное превью; это не размещение')
     end) end)

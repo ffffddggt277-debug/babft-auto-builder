@@ -16,6 +16,7 @@ jobs:
       - name: Compile, analyze and test
         run: |
           /tmp/luau/luau-compile BABFT_AutoBuilder.lua >/dev/null
-          /tmp/luau/luau-analyze src/Schema.luau src/Loader.luau src/Planner.luau src/Builder.luau src/GameAdapter.luau
+          /tmp/luau/luau-analyze src/Schema.luau src/Loader.luau src/Planner.luau src/Geometry.luau src/Builder.luau src/GameAdapter.luau
           /tmp/luau/luau tests/core.luau
+          python3 tests/example_check.py
           python3 tools/test_ui_mock.py /tmp/luau/luau

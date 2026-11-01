@@ -1,6 +1,7 @@
 local Schema = require('../src/Schema')
 local Loader = require('../src/Loader')
 local Planner = require('../src/Planner')
+local Geometry = require('../src/Geometry')
 local Builder = require('../src/Builder')
 local GameAdapter = require('../src/GameAdapter')
 local passed=0
@@ -29,6 +30,29 @@ test('Raw URL allowlist',function() assert(Loader.validateUrl(validUrl)==validUr
 test('loader errors and injected success',function() fails(function() Loader.load(validUrl,function() error('offline') end,function() end,Schema) end,'offline');local b=Loader.load(validUrl,function() return 'ok' end,function() return sample() end,Schema);assert(#b.blocks==2) end)
 test('count, missing and bad inventory',function() local required=Planner.count(Schema.validate(sample()));assert(required.wood==2);assert(Planner.compare(required,{wood=1}).wood==1);assert(Planner.compare(required,{wood=5}).wood==0);fails(function() Planner.compare(required,{wood=-1}) end,'инвентаря') end)
 test('ordering stable without mutation',function() local b=Schema.validate(sample());local sorted=Planner.plan(b,'bottom-up');assert(sorted[1].index==2 and b.blocks[1].index==1);fails(function() Planner.plan(b,'no') end,'порядок') end)
+test('geometry anchors lowest surface at ground',function()
+    local b=Schema.validate(sample());assert(math.abs(Geometry.lowestY(b)-(-0.5))<1e-9)
+    assert(math.abs(Geometry.originY(b,10)-10.5)<1e-9)
+end)
+test('geometry accounts for tilted cuboids',function()
+    local b=Schema.validate(sample());b.blocks={b.blocks[1]};local v=b.blocks[1];v.position.y=-2;v.size={x=2,y=4,z=6};v.rotation={x=90,y=0,z=0}
+    assert(math.abs(Geometry.lowestY(b)-(-5))<1e-9)
+    v.rotation={x=0,y=0,z=90};assert(math.abs(Geometry.lowestY(b)-(-3))<1e-9)
+    v.rotation={x=0,y=45,z=0};assert(math.abs(Geometry.lowestY(b)-(-4))<1e-9)
+end)
+test('geometry agrees with independent corner calculation',function()
+    local b=Schema.validate(sample());b.blocks={b.blocks[1]};local v=b.blocks[1];v.rotation={x=37,y=21,z=57};v.size={x=2,y=4,z=6};v.position.y=3
+    local rx,ry,rz=math.rad(37),math.rad(21),math.rad(57);local lowest=math.huge
+    for _,a in ipairs({-1,1}) do for _,c in ipairs({-1,1}) do for _,d in ipairs({-1,1}) do
+        local x,y,z=a,2*c,3*d
+        local xz=x*math.cos(rz)-y*math.sin(rz);local yz=x*math.sin(rz)+y*math.cos(rz)
+        local zy=-xz*math.sin(ry)+z*math.cos(ry)
+        local finalY=yz*math.cos(rx)-zy*math.sin(rx)+3
+        lowest=math.min(lowest,finalY)
+    end end end
+    assert(math.abs(Geometry.lowestY(b)-lowest)<1e-9)
+    fails(function() Geometry.lowestY({blocks={}}) end,'Пустая схема')
+end)
 test('builder completion and failure',function() local adapter={place=function() return true,'ok' end};local b=Builder.new(adapter,function() end,function() end);b:start(Planner.plan(Schema.validate(sample()),'original'),0.2);assert(b.state=='completed' and b.done==2);local failing=Builder.new({place=function() return false,'no' end},function() end,function() end);failing:start(Planner.plan(Schema.validate(sample()),'original'),0.2);assert(failing.state=='failed' and failing.done==0) end)
 test('cancel prevents later steps and overlapping starts',function() local calls=0;local b;local adapter={place=function() calls+=1;b:cancel();fails(function() b:start({{}},0.2) end,'ещё не завершён');return true,'observed' end};b=Builder.new(adapter,function() end,function() end);b:start({{},{}},0.2);assert(calls==1 and b.done==1 and b.state=='cancelled') end)
 test('pause and resume between steps',function() local calls=0;local b;local adapter={place=function() calls+=1;if calls==1 then b:pause() end;return true,'ok' end};b=Builder.new(adapter,function() end,function() if b.state=='paused' then b:resume() end end);b:start({{},{}},0.2);assert(calls==2 and b.state=='completed') end)

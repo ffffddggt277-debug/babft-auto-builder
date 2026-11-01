@@ -30,13 +30,17 @@ function GameAdapter:ready()
     local inv, err = self:inventory(); if not inv then return nil,err end
     return {zone=zone,rf=rf,owned=owned}
 end
+function GameAdapter:transform(block)
+    if not self.origin then error('Сначала сохраните исходную точку',0) end
+    local p,r=block.position,block.rotation
+    return self.origin * self.frame.new(p.x,p.y,p.z) * self.frame.Angles(math.rad(r.x),math.rad(r.y),math.rad(r.z))
+end
 function GameAdapter:place(block)
     local context, err = self:ready(); if not context then return false,err end
     local inventory, inventoryErr = self:inventory(); if not inventory then return false,inventoryErr end
     if inventory.wood < 1 then return false,'Data.WoodBlock: нет доступных блоков' end
     local before = {}; for _, inst in ipairs(context.owned:GetChildren()) do before[inst]=true end
-    local p, r = block.position, block.rotation
-    local target = self.origin * self.frame.new(p.x,p.y,p.z) * self.frame.Angles(math.rad(r.x),math.rad(r.y),math.rad(r.z))
+    local target = self:transform(block)
     -- A successful network call is not confirmation of a placed block.
     local ok, response = pcall(function() return context.rf:InvokeServer('WoodBlock',inventory.wood,context.zone,target,true) end)
     if not ok then return false,'Ошибка вызова BuildingTool: '..tostring(response) end
