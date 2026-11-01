@@ -13,7 +13,7 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     local oldPreview = workspace:FindFirstChild('BabftAutoBuilderLocalPreview')
     if oldPreview then oldPreview:Destroy() end
     local gui = Instance.new('ScreenGui')
-    gui.Name='BabftAutoBuilder'; gui.ResetOnSpawn=false; gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling; gui.Parent=guiParent
+    gui.Name='BabftAutoBuilder'; gui.ResetOnSpawn=false; gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling; gui.DisplayOrder=100; gui.Parent=guiParent
     local colors = {background=Color3.fromRGB(21,28,33),surface=Color3.fromRGB(32,42,47),field=Color3.fromRGB(43,54,59),text=Color3.fromRGB(235,243,239),muted=Color3.fromRGB(169,185,178),accent=Color3.fromRGB(55,147,116),warning=Color3.fromRGB(244,190,115)}
     local function create(class, props, parent)
         local inst = Instance.new(class)
@@ -23,14 +23,14 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     end
     local function corner(object, radius) create('UICorner',{CornerRadius=UDim.new(0,radius)},object) end
     local function label(parent,text,height,color)
-        return create('TextLabel',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,height),Text=text,TextColor3=color or colors.text,Font=Enum.Font.Gotham,TextSize=14,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Center},parent)
+        return create('TextLabel',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,height),AutomaticSize=Enum.AutomaticSize.Y,Text=text,TextColor3=color or colors.text,Font=Enum.Font.Gotham,TextSize=15,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Center},parent)
     end
     local function button(parent,text,height)
-        local b=create('TextButton',{BackgroundColor3=colors.field,BorderSizePixel=0,Size=UDim2.new(1,0,0,height or 42),Text=text,TextColor3=colors.text,Font=Enum.Font.GothamMedium,TextSize=14,TextWrapped=true,AutoButtonColor=true},parent)
+        local b=create('TextButton',{BackgroundColor3=colors.field,BorderSizePixel=0,Size=UDim2.new(1,0,0,height or 48),Text=text,TextColor3=colors.text,Font=Enum.Font.GothamMedium,TextSize=15,TextWrapped=true,AutoButtonColor=true},parent)
         corner(b,7); return b
     end
     local function textbox(parent,placeholder,default)
-        local b=create('TextBox',{BackgroundColor3=colors.field,BorderSizePixel=0,Size=UDim2.new(1,0,0,44),Text=default or '',PlaceholderText=placeholder,PlaceholderColor3=colors.muted,TextColor3=colors.text,Font=Enum.Font.Gotham,TextSize=14,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},parent)
+        local b=create('TextBox',{BackgroundColor3=colors.field,BorderSizePixel=0,Size=UDim2.new(1,0,0,44),Text=default or '',PlaceholderText=placeholder,PlaceholderColor3=colors.muted,TextColor3=colors.text,Font=Enum.Font.Gotham,TextSize=15,ClearTextOnFocus=false,TextXAlignment=Enum.TextXAlignment.Left},parent)
         create('UIPadding',{PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,10)},b);corner(b,7);return b
     end
     local open = button(gui,'BABFT',44)
@@ -41,7 +41,9 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
         local camera=workspace.CurrentCamera
         if not camera then return end
         local v=camera.ViewportSize
-        window.Size=UDim2.fromOffset(math.max(1,math.min(460,v.X-20)),math.max(1,math.min(570,v.Y-24)))
+        window.Size=UDim2.fromOffset(math.max(1,math.min(500,v.X-24)),math.max(1,math.min(600,v.Y-36)))
+        -- Orientation changes can otherwise leave a dragged window off-screen.
+        window.Position=UDim2.fromScale(0.5,0.5)
     end
     sizeWindow()
     local cameraConnection
@@ -79,8 +81,8 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     local body=create('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(10,102),Size=UDim2.new(1,-20,1,-112),ClipsDescendants=true},window)
     local pages={}
     local tabButtons={}
-    for index,name in ipairs({'Схема','Постройка','Журнал'}) do
-        local tab=button(tabs,name,42);tab.Size=UDim2.new(1/3,-4,1,0);tab.LayoutOrder=index;tabButtons[name]=tab
+    for index,name in ipairs({'Схема','Стройка','Золото','Журнал'}) do
+        local tab=button(tabs,name,42);tab.Size=UDim2.new(1/4,-4.5,1,0);tab.LayoutOrder=index;tabButtons[name]=tab
         local page=create('ScrollingFrame',{Name=name,BackgroundTransparency=1,BorderSizePixel=0,Size=UDim2.fromScale(1,1),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollBarThickness=5,Visible=index==1},body)
         create('UIPadding',{PaddingTop=UDim.new(0,4),PaddingBottom=UDim.new(0,14),PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,10)},page)
         create('UIListLayout',{Padding=UDim.new(0,8),SortOrder=Enum.SortOrder.LayoutOrder},page)
@@ -88,24 +90,26 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
         tab.Activated:Connect(function() for n,p in pairs(pages) do p.Visible=(n==name);tabButtons[n].BackgroundColor3=(n==name and colors.accent or colors.field) end end)
     end
     tabButtons['Схема'].BackgroundColor3=colors.accent
-    local schemaPage,buildPage,logPage=pages['Схема'],pages['Постройка'],pages['Журнал']
+    local schemaPage,buildPage,goldPage,logPage=pages['Схема'],pages['Стройка'],pages['Золото'],pages['Журнал']
     local counter=0
     local function order(inst) counter+=1;inst.LayoutOrder=counter;return inst end
     local logs={}
-    local logLabel=order(label(logPage,'Журнал пуст',400,colors.muted)); logLabel.TextYAlignment=Enum.TextYAlignment.Top
+    local logLabel=order(label(logPage,'Журнал пуст',100,colors.muted)); logLabel.TextYAlignment=Enum.TextYAlignment.Top
     local function log(message)
         table.insert(logs,os.date('%H:%M:%S')..' '..message)
         if #logs>18 then table.remove(logs,1) end
         logLabel.Text=table.concat(logs,'\n');print('[BABFT Auto Builder] '..message)
     end
-    order(label(schemaPage,'GitHub Raw URL — только публичный JSON',25,colors.muted))
+    order(label(schemaPage,'СХЕМА И ПРЕДПРОСМОТР',28,colors.accent))
+    order(label(schemaPage,'GitHub Raw URL — публичный JSON',25,colors.muted))
     local url=order(textbox(schemaPage,'https://raw.githubusercontent.com/...','https://raw.githubusercontent.com/ffffddggt277-debug/babft-auto-builder/main/examples/test_build.json'))
     local load=order(button(schemaPage,'Загрузить и проверить JSON'))
     local summary=order(label(schemaPage,'Схема не загружена',68,colors.muted))
     local planText=order(label(schemaPage,'',80,colors.muted));planText.TextYAlignment=Enum.TextYAlignment.Top
     order(label(schemaPage,'Превью локальное: это не блоки в игре.',32,colors.warning))
     local previewButton=order(button(schemaPage,'Показать / убрать локальное превью'))
-    order(label(buildPage,'ЭКСПЕРИМЕНТ: API из стороннего исходника. В BABFT не проверено. Размер и цвет не применяются!',70,colors.warning))
+    order(label(buildPage,'ПОСТРОЙКА',28,colors.accent))
+    order(label(buildPage,'Внимание: игровой адаптер не проверен. Размер и цвет при постройке не применяются.',55,colors.warning))
     local inventoryLabel=order(label(buildPage,'Инвентарь: неизвестен',48,colors.muted))
     local inventoryButton=order(button(buildPage,'Прочитать Data.WoodBlock'))
     local originButton=order(button(buildPage,'Сохранить позицию персонажа как начало'))
@@ -118,6 +122,11 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     local cancel=order(button(buildPage,'Отменить'))
     local progress=order(label(buildPage,'Ожидание · 0 / 0',55,colors.muted))
     order(label(buildPage,'Отмена не откатывает уже размещённые блоки и не прерывает запрос к серверу.',45,colors.muted))
+    order(label(goldPage,'ЗОЛОТО',28,colors.accent))
+    order(label(goldPage,'Автоматический заработок пока недоступен: текущий игровой способ не проверен. Фиктивной кнопки здесь нет.',70,colors.warning))
+    order(label(goldPage,'В обычной игре золото выдают за прохождение этапов и достижение сокровища. Источники и ограничения описаны в README.',70,colors.muted))
+    local goldStatus=order(label(goldPage,'Баланс и карта не проверены.',50,colors.muted))
+    local inspectGold=order(button(goldPage,'Проверить баланс и карту'))
     local adapter=GameAdapter.new(player,workspace,task.wait,CFrame)
     local blueprint, busy, consented, orderMode, preview = nil,false,false,'original',nil
     local function clearPreview() if preview then preview:Destroy();preview=nil end end
@@ -128,6 +137,27 @@ function UI.start(Schema, Loader, Planner, Builder, GameAdapter)
     local function safe(fn)
         local ok,err=pcall(fn); if not ok then log('ОШИБКА: '..tostring(err));progress.Text='Ошибка: '..tostring(err) end
     end
+    inspectGold.Activated:Connect(function() safe(function()
+        local data=player:FindFirstChild('Data')
+        local gold=data and data:FindFirstChild('Gold')
+        local balance='недоступен'
+        if gold and gold:IsA('ValueBase') and type(gold.Value)=='number' then balance=tostring(gold.Value) end
+        local stages=workspace:FindFirstChild('BoatStages')
+        stages=stages and stages:FindFirstChild('NormalStages')
+        local found=0
+        if stages then
+            for i=1,10 do
+                local stage=stages:FindFirstChild('CaveStage'..i)
+                if stage and stage:FindFirstChild('DarknessPart') then found+=1 end
+            end
+        end
+        local ending=stages and stages:FindFirstChild('TheEnd')
+        local chest=ending and ending:FindFirstChild('GoldenChest')
+        local trigger=chest and chest:FindFirstChild('Trigger')
+        local chestText=trigger and 'найден' or 'не найден'
+        goldStatus.Text='Data.Gold: '..balance..'\nРазделителей этапов найдено: '..found..' из 10\nТриггер сундука: '..chestText..'\nЭто проверка объектов, а не проверка заработка.'
+        log('Диагностика золота: Data.Gold='..balance..'; этапов='..found..'/10; триггер='..chestText)
+    end) end)
     local function updateSummary()
         if not blueprint then summary.Text='Схема не загружена';planText.Text='';return end
         summary.Text=blueprint.name..' · блоков: '..#blueprint.blocks..'\nТолько wood. Размер и цвет хранятся в схеме, но не применяются.'

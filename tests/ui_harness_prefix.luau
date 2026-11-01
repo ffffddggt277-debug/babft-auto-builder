@@ -21,7 +21,7 @@ local function new(class)
     mt.__newindex=function(t,k,v) if k=='Parent' then rawset(t,k,v); if v and v._children then table.insert(v._children,t) end else rawset(t,k,v) end end
     function item:FindFirstChild(n) for _,v in ipairs(self._children) do if v.Name==n then return v end end end
     function item:FindFirstChildOfClass(n) for _,v in ipairs(self._children) do if v._class==n then return v end end end
-    function item:GetPropertyChangedSignal() return signal() end
+    function item:GetPropertyChangedSignal(name) self._signals=self._signals or {};self._signals[name]=self._signals[name] or signal();return self._signals[name] end
     function item:Destroy() self.Destroying:fire() end
     setmetatable(item,mt);table.insert(created,item);return item
 end
