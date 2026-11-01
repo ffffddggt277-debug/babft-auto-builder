@@ -1,11 +1,21 @@
-name: checks
+name: Luau checks
 on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm run check
+      - name: Install pinned Luau CLI
+        run: |
+          curl --fail --location --retry 3 -o /tmp/luau.zip https://github.com/luau-lang/luau/releases/download/0.745/luau-ubuntu.zip
+          echo '186e5ddaa2b048ebc7390c11ed1b00c04e7d3beaffed429250329e3575d2ece2  /tmp/luau.zip' | sha256sum --check
+          mkdir -p /tmp/luau && unzip -q /tmp/luau.zip -d /tmp/luau
+          chmod +x /tmp/luau/luau /tmp/luau/luau-compile /tmp/luau/luau-analyze
+      - name: Verify generated bundle
+        run: python3 tools/bundle.py && git diff --exit-code -- BABFT_AutoBuilder.lua
+      - name: Compile, analyze and test
+        run: |
+          /tmp/luau/luau-compile BABFT_AutoBuilder.lua >/dev/null
+          /tmp/luau/luau-analyze src/Schema.luau src/Loader.luau src/Planner.luau src/Builder.luau src/GameAdapter.luau
+          /tmp/luau/luau tests/core.luau
+          python3 tools/test_ui_mock.py /tmp/luau/luau
