@@ -1,0 +1,14 @@
+{
+  "name": "babft-auto-builder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "for f in src/*.js; do node --check \"$f\" || exit 1; done && node --test",
+    "serve": "python3 -m http.server 8000"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

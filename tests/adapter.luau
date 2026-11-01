@@ -1,0 +1,7 @@
+local Adapters = require('../roblox/Adapters')
+local gameAdapter = Adapters.game()
+local success, message = gameAdapter.place({})
+assert(success == false and string.find(message, 'UNAVAILABLE'))
+local balance, err = Adapters.economy().balance()
+assert(balance == nil and string.find(err, 'UNAVAILABLE'))
+print('Luau adapter smoke test passed')

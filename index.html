@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>BABFT Auto Builder · Планировщик</title>
+    <link rel="stylesheet" href="src/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <span class="brand-icon" aria-hidden="true">▦</span
+        ><strong>BABFT <span>Auto Builder</span></strong>
+      </div>
+      <span class="badge">ТОЛЬКО СИМУЛЯЦИЯ</span>
+    </header>
+    <main>
+      <div class="intro">
+        <div>
+          <p class="eyebrow">ПЛАНИРОВЩИК ПОСТРОЕК</p>
+          <h1>От идеи к плану.</h1>
+          <p class="muted">
+            Проверьте схему и ресурсы до строительства. В Roblox ничего не
+            изменяется.
+          </p>
+        </div>
+        <button
+          id="toggle"
+          class="secondary"
+          aria-expanded="true"
+          aria-controls="workspace"
+        >
+          Скрыть панель
+        </button>
+      </div>
+      <div id="workspace">
+        <div class="grid">
+          <section class="card">
+            <div class="section-heading">
+              <div>
+                <p class="step">01 / СХЕМА</p>
+                <h2>Источник</h2>
+              </div>
+              <span class="small-tag">JSON v1</span>
+            </div>
+            <label for="url">GitHub Raw URL</label>
+            <div class="url-row">
+              <input
+                id="url"
+                type="url"
+                placeholder="https://raw.githubusercontent.com/…"
+                autocomplete="off"
+              /><button id="load" class="secondary">Загрузить</button>
+            </div>
+            <p class="help">
+              Только публичный HTTPS raw.githubusercontent.com. Никакой код из
+              схемы не запускается.
+            </p>
+            <div class="labelrow">
+              <label for="json">JSON схемы</label
+              ><button class="textbutton" id="example">Загрузить пример</button>
+            </div>
+            <textarea
+              id="json"
+              spellcheck="false"
+              placeholder="Вставьте JSON или загрузите пример"
+            ></textarea
+            ><button id="validate" class="primary wide">
+              Проверить и создать план
+            </button>
+            <p id="status" role="status" aria-live="polite" class="status">
+              Схема ещё не проверена.
+            </p>
+          </section>
+          <section class="card">
+            <div class="section-heading">
+              <div>
+                <p class="step">02 / ПРОСМОТР</p>
+                <h2>Схема сверху</h2>
+              </div>
+              <span id="block-count" class="small-tag">0 блоков</span>
+            </div>
+            <div class="preview">
+              <canvas
+                id="canvas"
+                width="900"
+                height="520"
+                role="img"
+                aria-label="Проекция схемы сверху по осям X и Z"
+              ></canvas>
+              <div id="empty" class="empty">
+                Загрузите схему,<br />чтобы увидеть план
+              </div>
+            </div>
+            <p class="help">
+              Проекция X/Z: поворот вокруг Y учтён; высота обозначена порядком
+              слоёв. Наклоны X/Z в этом виде не показаны.
+            </p>
+            <div id="plan-summary" class="summary">План ещё не создан</div>
+            <details class="steps">
+              <summary>Показать последовательность</summary>
+              <ol id="steps-list" aria-label="Шаги симуляции"></ol>
+            </details>
+          </section>
+        </div>
+        <div class="grid lower">
+          <section class="card">
+            <div class="section-heading">
+              <div>
+                <p class="step">03 / РЕСУРСЫ</p>
+                <h2>Инвентарь</h2>
+              </div>
+              <span class="small-tag">ВРУЧНУЮ</span>
+            </div>
+            <label for="wood">Деревянные блоки в наличии</label
+            ><input
+              id="wood"
+              type="number"
+              value="5"
+              min="0"
+              max="1000000"
+              step="1"
+            />
+            <div id="resources" class="resource muted">
+              После проверки здесь появится расчёт.
+            </div>
+            <p class="help">
+              Значение вводится вручную — игровой инвентарь не подключён. Один
+              элемент схемы считается одним блоком.
+            </p>
+          </section>
+          <section class="card">
+            <div class="section-heading">
+              <div>
+                <p class="step">04 / ВЫПОЛНЕНИЕ</p>
+                <h2>Симуляция</h2>
+              </div>
+              <span id="state" class="small-tag">ОЖИДАНИЕ</span>
+            </div>
+            <div class="settings">
+              <div>
+                <label for="order">Порядок</label
+                ><select id="order">
+                  <option value="original">Как в файле</option>
+                  <option value="bottom-up">Снизу вверх</option>
+                  <option value="type">По типу</option>
+                </select>
+              </div>
+              <div>
+                <label for="speed">Интервал, мс</label
+                ><input
+                  id="speed"
+                  type="number"
+                  min="50"
+                  max="5000"
+                  value="300"
+                  step="50"
+                />
+              </div>
+            </div>
+            <label class="check"
+              ><input id="check-resources" type="checkbox" checked /> Проверять
+              ресурсы перед стартом</label
+            ><progress id="progress" max="1" value="0"></progress>
+            <div id="progress-label" class="progress-label">0 / 0 блоков</div>
+            <div class="buttons">
+              <button id="start" class="primary">Начать симуляцию</button
+              ><button id="pause" class="secondary">Пауза</button
+              ><button id="cancel" class="secondary">Отмена</button>
+            </div>
+            <p class="help">
+              Пауза и отмена не прерывают уже начатый шаг. В реальной игре
+              действия не выполняются.
+            </p>
+          </section>
+        </div>
+        <details class="card diagnostics">
+          <summary>Диагностика и журнал</summary>
+          <p class="help">
+            Только локальные события этой вкладки; журнал не отправляется на
+            сервер.
+          </p>
+          <pre id="log">Событий пока нет.</pre>
+          <button id="download-log" class="secondary">Скачать журнал</button>
+        </details>
+      </div>
+      <footer>
+        Независимый проект · Не связан с Chillz Studios или Roblox ·
+        <a
+          href="https://github.com/ffffddggt277-debug/babft-auto-builder"
+          rel="noreferrer"
+          >Исходный код</a
+        >
+      </footer>
+    </main>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
